@@ -6,6 +6,11 @@ import type { ApiProvider, ProviderOptions } from '../types/index';
 const ABLITERATION_API_BASE_URL = 'https://api.abliteration.ai/v1';
 const ABLITERATION_API_BASE_URL_ENV_VAR = 'ABLIT_API_BASE_URL';
 
+function normalizeApiBaseUrl(apiBaseUrl?: string): string | undefined {
+  const trimmedApiBaseUrl = apiBaseUrl?.trim();
+  return trimmedApiBaseUrl ? trimmedApiBaseUrl : undefined;
+}
+
 export class AbliterationProvider extends OpenAiChatCompletionProvider {
   constructor(modelName: string, providerOptions: ProviderOptions = {}) {
     super(modelName, {
@@ -13,9 +18,9 @@ export class AbliterationProvider extends OpenAiChatCompletionProvider {
       config: {
         ...providerOptions.config,
         apiBaseUrl:
-          providerOptions.config?.apiBaseUrl ??
-          providerOptions.env?.ABLIT_API_BASE_URL ??
-          process.env[ABLITERATION_API_BASE_URL_ENV_VAR] ??
+          normalizeApiBaseUrl(providerOptions.config?.apiBaseUrl) ??
+          normalizeApiBaseUrl(providerOptions.env?.ABLIT_API_BASE_URL) ??
+          normalizeApiBaseUrl(process.env[ABLITERATION_API_BASE_URL_ENV_VAR]) ??
           ABLITERATION_API_BASE_URL,
         apiKeyEnvar: providerOptions.config?.apiKeyEnvar ?? 'ABLIT_KEY',
       },

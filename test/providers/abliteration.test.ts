@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { disableCache, enableCache, fetchWithCache } from '../../src/cache';
-import {
-  AbliterationProvider,
-  createAbliterationProvider,
-} from '../../src/providers/abliteration';
+import { AbliterationProvider, createAbliterationProvider } from '../../src/providers/abliteration';
 
 vi.mock('../../src/cache', async (importOriginal) => {
   return {
@@ -66,6 +63,23 @@ describe('AbliterationProvider', () => {
     const provider = new AbliterationProvider('abliterated-model');
 
     expect(provider.config.apiBaseUrl).toBe('https://env.example.com/v1');
+  });
+
+  it('treats empty API base URLs as unset', () => {
+    process.env.ABLIT_API_BASE_URL = '';
+
+    const providerFromEmptyEnv = new AbliterationProvider('abliterated-model');
+    expect(providerFromEmptyEnv.config.apiBaseUrl).toBe('https://api.abliteration.ai/v1');
+
+    process.env.ABLIT_API_BASE_URL = 'https://env.example.com/v1';
+
+    const providerFromEmptyConfig = new AbliterationProvider('abliterated-model', {
+      config: {
+        apiBaseUrl: '',
+      },
+    });
+
+    expect(providerFromEmptyConfig.config.apiBaseUrl).toBe('https://env.example.com/v1');
   });
 
   it('redacts apiKey in JSON output even when it is falsy', () => {
@@ -170,9 +184,8 @@ describe('AbliterationProvider', () => {
   });
 
   it('requires an API key at request time', async () => {
-    delete process.env.ABLIT_KEY;
-
     const provider = new AbliterationProvider('abliterated-model');
+    vi.spyOn(provider, 'getApiKey').mockReturnValue(undefined);
 
     await expect(provider.callApi('Test prompt')).rejects.toThrow(
       'API key is not set. Set the ABLIT_KEY environment variable or add `apiKey` to the provider config.',
