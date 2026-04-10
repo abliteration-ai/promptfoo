@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearCache, disableCache, enableCache } from '../../src/cache';
 import { importModule } from '../../src/esm';
 import logger from '../../src/logger';
+import { AbliterationProvider } from '../../src/providers/abliteration';
 import { AnthropicCompletionProvider } from '../../src/providers/anthropic/completion';
 import { AzureChatCompletionProvider } from '../../src/providers/azure/chat';
 import { AzureCompletionProvider } from '../../src/providers/azure/completion';
@@ -696,6 +697,14 @@ describe('loadApiProvider', () => {
     );
     expect(provider).toBeInstanceOf(OpenAiChatCompletionProvider);
     expect(provider.id()).toBe('meta/meta-llama/Meta-Llama-3-8B-Instruct');
+  });
+
+  it('loadApiProvider with abliteration', async () => {
+    const provider = await loadApiProvider('abliteration:abliterated-model');
+    expect(provider).toBeInstanceOf(AbliterationProvider);
+    expect(provider.id()).toBe('abliteration:abliterated-model');
+    expect(provider.config.apiBaseUrl).toBe('https://api.abliteration.ai/v1');
+    expect(provider.config.apiKeyEnvar).toBe('ABLIT_KEY');
   });
 
   it('loadApiProvider with litellm default (chat)', async () => {
