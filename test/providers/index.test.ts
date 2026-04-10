@@ -707,6 +707,23 @@ describe('loadApiProvider', () => {
     expect(provider.config.apiKeyEnvar).toBe('ABLIT_KEY');
   });
 
+  it('loadApiProvider with abliteration chat format', async () => {
+    const provider = await loadApiProvider('abliteration:chat:abliterated-model');
+    expect(provider).toBeInstanceOf(AbliterationProvider);
+    expect(provider.id()).toBe('abliteration:abliterated-model');
+    expect(provider.config.apiBaseUrl).toBe('https://api.abliteration.ai/v1');
+    expect(provider.config.apiKeyEnvar).toBe('ABLIT_KEY');
+  });
+
+  it('loadApiProvider rejects malformed abliteration routes', async () => {
+    await expect(loadApiProvider('abliteration:chat')).rejects.toThrow(
+      'Abliteration provider requires a model name. Use format: abliteration:<model_name> or abliteration:chat:<model_name>',
+    );
+    await expect(loadApiProvider('abliteration:')).rejects.toThrow(
+      'Abliteration provider requires a model name. Use format: abliteration:<model_name> or abliteration:chat:<model_name>',
+    );
+  });
+
   it('loadApiProvider with litellm default (chat)', async () => {
     const provider = await loadApiProvider('litellm:gpt-5.1-mini');
     expect(provider.id()).toBe('litellm:gpt-5.1-mini');

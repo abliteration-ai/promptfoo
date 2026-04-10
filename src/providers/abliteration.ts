@@ -4,6 +4,7 @@ import type { EnvOverrides } from '../types/env';
 import type { ApiProvider, ProviderOptions } from '../types/index';
 
 const ABLITERATION_API_BASE_URL = 'https://api.abliteration.ai/v1';
+const ABLITERATION_API_BASE_URL_ENV_VAR = 'ABLIT_API_BASE_URL';
 
 export class AbliterationProvider extends OpenAiChatCompletionProvider {
   constructor(modelName: string, providerOptions: ProviderOptions = {}) {
@@ -11,8 +12,12 @@ export class AbliterationProvider extends OpenAiChatCompletionProvider {
       ...providerOptions,
       config: {
         ...providerOptions.config,
-        apiBaseUrl: providerOptions.config?.apiBaseUrl || ABLITERATION_API_BASE_URL,
-        apiKeyEnvar: 'ABLIT_KEY',
+        apiBaseUrl:
+          providerOptions.config?.apiBaseUrl ??
+          providerOptions.env?.ABLIT_API_BASE_URL ??
+          process.env[ABLITERATION_API_BASE_URL_ENV_VAR] ??
+          ABLITERATION_API_BASE_URL,
+        apiKeyEnvar: providerOptions.config?.apiKeyEnvar ?? 'ABLIT_KEY',
       },
     });
   }
@@ -31,7 +36,7 @@ export class AbliterationProvider extends OpenAiChatCompletionProvider {
       model: this.modelName,
       config: {
         ...this.config,
-        ...(this.config.apiKey && { apiKey: undefined }),
+        ...('apiKey' in this.config ? { apiKey: undefined } : {}),
       },
     };
   }

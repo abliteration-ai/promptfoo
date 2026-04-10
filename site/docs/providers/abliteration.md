@@ -1,11 +1,13 @@
 ---
+title: Abliteration Provider
 sidebar_label: Abliteration
-description: "Use Abliteration's OpenAI-compatible chat completions API for text and multimodal evals"
+description: "Configure Abliteration's OpenAI-compatible chat completions API in Promptfoo for text and multimodal evals, including standard chat and image prompts."
+sidebar_position: 5
 ---
 
 # Abliteration
 
-[Abliteration](https://abliteration.ai/) exposes an OpenAI-compatible chat completions API, so promptfoo can use it through a dedicated `abliteration:` provider.
+[Abliteration](https://abliteration.ai/) exposes an OpenAI-compatible chat completions API, so Promptfoo can use it through a dedicated `abliteration:` provider.
 
 ## Setup
 

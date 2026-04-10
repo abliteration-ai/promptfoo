@@ -231,6 +231,7 @@ type EnvVars = {
   // Provider-specific settings
   //=========================================================================
   // Abliteration
+  ABLIT_API_BASE_URL?: string;
   ABLIT_KEY?: string;
 
   // AI21
