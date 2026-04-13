@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import dedent from 'dedent';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearCache, disableCache, enableCache } from '../../src/cache';
+import cliState from '../../src/cliState';
 import { importModule } from '../../src/esm';
 import logger from '../../src/logger';
 import { AbliterationProvider } from '../../src/providers/abliteration';
@@ -1263,6 +1264,31 @@ describe('loadApiProvider', () => {
       } else {
         process.env.ABLIT_API_BASE_URL = originalAblitApiBaseUrl;
       }
+    }
+  });
+
+  it('uses cliState env values for Abliteration providers loaded without context env', async () => {
+    const originalConfig = cliState.config;
+    cliState.config = {
+      env: {
+        ABLIT_API_BASE_URL: 'https://cli-state.example.com/v1',
+      },
+    };
+
+    try {
+      const provider = (await loadApiProvider('abliteration:abliterated-model', {
+        options: {
+          env: {
+            ABLIT_KEY: 'provider-key',
+          },
+        },
+      })) as AbliterationProvider;
+
+      expect(provider.env?.ABLIT_API_BASE_URL).toBeUndefined();
+      expect(provider.config.apiBaseUrl).toBe('https://cli-state.example.com/v1');
+      expect(provider.getApiKey()).toBe('provider-key');
+    } finally {
+      cliState.config = originalConfig;
     }
   });
 
