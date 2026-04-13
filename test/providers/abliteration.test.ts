@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { disableCache, enableCache, fetchWithCache } from '../../src/cache';
 import { AbliterationProvider, createAbliterationProvider } from '../../src/providers/abliteration';
+import { mockProcessEnv } from '../util/utils';
 
 vi.mock('../../src/cache', async (importOriginal) => {
   return {
@@ -12,30 +13,28 @@ vi.mock('../../src/cache', async (importOriginal) => {
 });
 
 const mockFetchWithCache = vi.mocked(fetchWithCache);
-const originalAblitKey = process.env.ABLIT_KEY;
-const originalAblitApiBaseUrl = process.env.ABLIT_API_BASE_URL;
+let restoreEnv: (() => void) | undefined;
+
+function mockAbliterationEnv(overrides: Record<string, string | undefined> = {}) {
+  restoreEnv?.();
+  restoreEnv = mockProcessEnv({
+    ABLIT_API_BASE_URL: undefined,
+    ABLIT_KEY: 'test-ablit-key',
+    ...overrides,
+  });
+}
 
 describe('AbliterationProvider', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
     disableCache();
-    process.env.ABLIT_KEY = 'test-ablit-key';
-    delete process.env.ABLIT_API_BASE_URL;
+    mockAbliterationEnv();
   });
 
   afterEach(() => {
     enableCache();
-    if (originalAblitKey === undefined) {
-      delete process.env.ABLIT_KEY;
-    } else {
-      process.env.ABLIT_KEY = originalAblitKey;
-    }
-
-    if (originalAblitApiBaseUrl === undefined) {
-      delete process.env.ABLIT_API_BASE_URL;
-    } else {
-      process.env.ABLIT_API_BASE_URL = originalAblitApiBaseUrl;
-    }
+    restoreEnv?.();
+    restoreEnv = undefined;
+    vi.resetAllMocks();
   });
 
   it('uses Abliteration defaults', () => {
@@ -58,7 +57,9 @@ describe('AbliterationProvider', () => {
   });
 
   it('uses the environment base URL when config does not override it', () => {
-    process.env.ABLIT_API_BASE_URL = 'https://env.example.com/v1';
+    mockAbliterationEnv({
+      ABLIT_API_BASE_URL: 'https://env.example.com/v1',
+    });
 
     const provider = new AbliterationProvider('abliterated-model');
 
@@ -66,12 +67,16 @@ describe('AbliterationProvider', () => {
   });
 
   it('treats empty API base URLs as unset', () => {
-    process.env.ABLIT_API_BASE_URL = '';
+    mockAbliterationEnv({
+      ABLIT_API_BASE_URL: '',
+    });
 
     const providerFromEmptyEnv = new AbliterationProvider('abliterated-model');
     expect(providerFromEmptyEnv.config.apiBaseUrl).toBe('https://api.abliteration.ai/v1');
 
-    process.env.ABLIT_API_BASE_URL = 'https://env.example.com/v1';
+    mockAbliterationEnv({
+      ABLIT_API_BASE_URL: 'https://env.example.com/v1',
+    });
 
     const providerFromEmptyConfig = new AbliterationProvider('abliterated-model', {
       config: {

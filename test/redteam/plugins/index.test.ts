@@ -14,9 +14,14 @@ import {
 import { Plugins } from '../../../src/redteam/plugins/index';
 import { neverGenerateRemote, shouldGenerateRemote } from '../../../src/redteam/remoteGeneration';
 import { getShortPluginId } from '../../../src/redteam/util';
+import {
+  createMockProvider,
+  createProviderResponse,
+  type MockApiProvider,
+} from '../../factories/provider';
 
 import type { FetchWithCacheResult } from '../../../src/cache';
-import type { ApiProvider, TestCase } from '../../../src/types/index';
+import type { TestCase } from '../../../src/types/index';
 
 vi.mock('../../../src/cache');
 vi.mock('../../../src/cliState', () => ({
@@ -54,16 +59,15 @@ function mockFetchResponse(result: any[]): FetchWithCacheResult<unknown> {
 }
 
 describe('Plugins', () => {
-  let mockProvider: ApiProvider;
+  let mockProvider: MockApiProvider;
 
   beforeEach(() => {
-    mockProvider = {
-      callApi: vi.fn().mockResolvedValue({
+    mockProvider = createMockProvider({
+      response: createProviderResponse({
         output: 'Sample output',
-        error: null,
+        error: null as any,
       }),
-      id: vi.fn().mockReturnValue('test-provider'),
-    };
+    });
 
     // Reset all mocks
     vi.clearAllMocks();
@@ -627,15 +631,10 @@ describe('Plugins', () => {
         ...ADDITIONAL_PLUGINS,
       ];
 
-      // Check that each expected plugin is registered
-      expectedPlugins.forEach((pluginKey) => {
-        const plugin = Plugins.find((p) => p.key === pluginKey);
-        expect(plugin).toBeDefined();
-      });
-
-      // Check the actual count matches the expected count
+      // Verify all expected plugin keys are present in the registry
       // Note: We don't expect exact equality because some plugins like collections may not be in the expected list
-      expect(Plugins.length).toBeGreaterThanOrEqual(expectedPlugins.length);
+      const registeredPluginKeys = Plugins.map((p) => p.key);
+      expect(registeredPluginKeys).toEqual(expect.arrayContaining(expectedPlugins));
     });
 
     it('should have unique plugin keys', () => {

@@ -1,7 +1,7 @@
 import dedent from 'dedent';
 import { afterEach, beforeEach, describe, expect, it, Mock, MockInstance, vi } from 'vitest';
 import cliState from '../../../src/cliState';
-import { matchesLlmRubric } from '../../../src/matchers';
+import { matchesLlmRubric } from '../../../src/matchers/llmGrading';
 import { MULTI_INPUT_VAR } from '../../../src/redteam/constants';
 import { RedteamGraderBase, RedteamPluginBase } from '../../../src/redteam/plugins/base';
 import {
@@ -9,15 +9,13 @@ import {
   parseGeneratedPrompts,
 } from '../../../src/redteam/plugins/multiInputFormat';
 import { maybeLoadFromExternalFile } from '../../../src/util/file';
+import { createMockProvider, createProviderResponse } from '../../factories/provider';
 
-import type {
-  ApiProvider,
-  Assertion,
-  AtomicTestCase,
-  GradingResult,
-} from '../../../src/types/index';
+import type { Assertion, AtomicTestCase, GradingResult } from '../../../src/types/index';
 
-vi.mock('../../../src/matchers', async (importOriginal) => {
+type TestProvider = ReturnType<typeof createMockProvider>;
+
+vi.mock('../../../src/matchers/llmGrading', async (importOriginal) => {
   return {
     ...(await importOriginal()),
     matchesLlmRubric: vi.fn(),
@@ -52,17 +50,16 @@ class TestPlugin extends RedteamPluginBase {
 }
 
 describe('RedteamPluginBase', () => {
-  let provider: ApiProvider;
+  let provider: TestProvider;
   let plugin: RedteamPluginBase;
 
   beforeEach(() => {
     cliState.config = {};
-    provider = {
-      callApi: vi.fn().mockResolvedValue({
+    provider = createMockProvider({
+      response: createProviderResponse({
         output: 'Prompt: test prompt\nPrompt: another prompt\nirrelevant line',
       }),
-      id: vi.fn().mockReturnValue('test-provider'),
-    };
+    });
     plugin = new TestPlugin(provider, 'test purpose', 'testVar', { language: 'German' });
   });
 
@@ -424,20 +421,19 @@ describe('RedteamPluginBase', () => {
   });
 
   describe('multi-input mode', () => {
-    let multiInputProvider: ApiProvider;
+    let multiInputProvider: TestProvider;
     let multiInputPlugin: TestPlugin;
 
     beforeEach(() => {
-      multiInputProvider = {
-        callApi: vi.fn().mockResolvedValue({
+      multiInputProvider = createMockProvider({
+        response: createProviderResponse({
           output: `
             Here are the test cases:
             <Prompt>{"username": "admin", "message": "Hello"}</Prompt>
             <Prompt>{"username": "guest", "message": "Test message"}</Prompt>
           `,
         }),
-        id: vi.fn().mockReturnValue('test-provider'),
-      };
+      });
     });
 
     it('should generate test cases with multi-input mode when inputs is defined', async () => {
@@ -525,15 +521,14 @@ describe('RedteamPluginBase', () => {
     });
 
     it('should handle parsing failures gracefully in multi-input mode', async () => {
-      const badProvider: ApiProvider = {
-        callApi: vi.fn().mockResolvedValue({
+      const badProvider = createMockProvider({
+        response: createProviderResponse({
           output: `
             <Prompt>{"username": "admin", "message": "Valid"}</Prompt>
             <Prompt>not valid json</Prompt>
           `,
         }),
-        id: vi.fn().mockReturnValue('test-provider'),
-      };
+      });
 
       const plugin = new TestPlugin(badProvider, 'test purpose', 'testVar', {
         inputs: {
@@ -550,13 +545,12 @@ describe('RedteamPluginBase', () => {
     });
 
     it('should handle nested object values in multi-input mode', async () => {
-      const nestedProvider: ApiProvider = {
-        callApi: vi.fn().mockResolvedValue({
+      const nestedProvider = createMockProvider({
+        response: createProviderResponse({
           output:
             '<Prompt>{"user": {"name": "admin", "id": 123}, "context": ["msg1", "msg2"]}</Prompt>',
         }),
-        id: vi.fn().mockReturnValue('test-provider'),
-      };
+      });
 
       // In multi-input mode, injectVar is set to MULTI_INPUT_VAR at the redteam run level
       const plugin = new TestPlugin(nestedProvider, 'test purpose', MULTI_INPUT_VAR, {
@@ -582,12 +576,11 @@ describe('RedteamPluginBase', () => {
     });
 
     it('should use parseGeneratedPrompts when inputs is not defined', async () => {
-      const standardProvider: ApiProvider = {
-        callApi: vi.fn().mockResolvedValue({
+      const standardProvider = createMockProvider({
+        response: createProviderResponse({
           output: 'Prompt: Standard prompt 1\nPrompt: Standard prompt 2',
         }),
-        id: vi.fn().mockReturnValue('test-provider'),
-      };
+      });
 
       const plugin = new TestPlugin(standardProvider, 'test purpose', 'testVar', {});
 
@@ -603,12 +596,9 @@ describe('RedteamPluginBase', () => {
     });
 
     it('should handle empty inputs object (no multi-input mode)', async () => {
-      const standardProvider: ApiProvider = {
-        callApi: vi.fn().mockResolvedValue({
-          output: 'Prompt: Standard prompt',
-        }),
-        id: vi.fn().mockReturnValue('test-provider'),
-      };
+      const standardProvider = createMockProvider({
+        response: createProviderResponse({ output: 'Prompt: Standard prompt' }),
+      });
 
       const plugin = new TestPlugin(standardProvider, 'test purpose', 'testVar', {
         inputs: {},
@@ -1211,6 +1201,60 @@ describe('RedteamGraderBase', () => {
     expect(result.rubric).toContain('Current timestamp:');
   });
 
+  it('should prefer remote grading when test options only contain a target provider', async () => {
+    cliState.config = {
+      redteam: {},
+    };
+    const mockResult: GradingResult = {
+      pass: true,
+      score: 1,
+      reason: 'Test passed',
+    };
+    vi.mocked(matchesLlmRubric).mockResolvedValue(mockResult);
+
+    await grader.getResult(
+      'test prompt',
+      'test output',
+      {
+        ...mockTest,
+        options: {
+          provider: 'openai:gpt-4o-mini',
+        },
+      },
+      undefined /* provider */,
+      undefined /* renderedValue */,
+    );
+
+    const grading = (matchesLlmRubric as Mock).mock.calls[0][2];
+    expect(Object.getOwnPropertyDescriptor(grading, '__promptfooPreferRemote')?.value).toBe(true);
+  });
+
+  it('should prefer remote grading when defaultTest.provider is a target provider', async () => {
+    cliState.config = {
+      redteam: {},
+      defaultTest: {
+        provider: 'openai:gpt-4o',
+      },
+    };
+    const mockResult: GradingResult = {
+      pass: true,
+      score: 1,
+      reason: 'Test passed',
+    };
+    vi.mocked(matchesLlmRubric).mockResolvedValue(mockResult);
+
+    await grader.getResult(
+      'test prompt',
+      'test output',
+      mockTest,
+      undefined /* provider */,
+      undefined /* renderedValue */,
+    );
+
+    const grading = (matchesLlmRubric as Mock).mock.calls[0][2];
+    expect(Object.getOwnPropertyDescriptor(grading, '__promptfooPreferRemote')?.value).toBe(true);
+  });
+
   describe('grader examples', () => {
     it('should append grader examples to rubric when present', async () => {
       const mockResult: GradingResult = {
@@ -1390,12 +1434,9 @@ describe('RedteamGraderBase', () => {
         ],
       };
 
-      const testProvider: ApiProvider = {
-        callApi: vi.fn().mockResolvedValue({
-          output: 'Prompt: test prompt',
-        }),
-        id: vi.fn().mockReturnValue('test-provider'),
-      };
+      const testProvider = createMockProvider({
+        response: createProviderResponse({ output: 'Prompt: test prompt' }),
+      });
 
       const pluginWithExamples = new TestPlugin(
         testProvider,
@@ -1462,12 +1503,9 @@ describe('RedteamGraderBase', () => {
         excludeStrategies: ['jailbreak'],
       };
 
-      const testProvider: ApiProvider = {
-        callApi: vi.fn().mockResolvedValue({
-          output: 'Prompt: test prompt',
-        }),
-        id: vi.fn().mockReturnValue('test-provider'),
-      };
+      const testProvider = createMockProvider({
+        response: createProviderResponse({ output: 'Prompt: test prompt' }),
+      });
 
       const plugin = new TestPlugin(testProvider, 'Financial assistant', 'testVar', fullConfig);
       const tests = await plugin.generateTests(1);
@@ -1849,15 +1887,14 @@ describe('RedteamGraderBase', () => {
   });
 
   describe('pluginConfig flow-through', () => {
-    let testProvider: ApiProvider;
+    let testProvider: TestProvider;
 
     beforeEach(() => {
-      testProvider = {
-        callApi: vi.fn().mockResolvedValue({
+      testProvider = createMockProvider({
+        response: createProviderResponse({
           output: 'Prompt: test prompt\nPrompt: another prompt',
         }),
-        id: vi.fn().mockReturnValue('test-provider'),
-      };
+      });
     });
 
     it('should pass full pluginConfig including graderExamples through promptsToTestCases', async () => {
@@ -2476,15 +2513,12 @@ describe('RedteamGraderBase', () => {
   });
 
   describe('gradingGuidance + graderExamples integration', () => {
-    let _testProvider: ApiProvider;
+    let _testProvider: TestProvider;
 
     beforeEach(() => {
-      _testProvider = {
-        callApi: vi.fn().mockResolvedValue({
-          output: 'Prompt: test prompt',
-        }),
-        id: vi.fn().mockReturnValue('test-provider'),
-      };
+      _testProvider = createMockProvider({
+        response: createProviderResponse({ output: 'Prompt: test prompt' }),
+      });
     });
 
     it('should work correctly with both gradingGuidance and graderExamples', async () => {

@@ -69,6 +69,6 @@ export function createAbliterationProvider(
   return new AbliterationProvider(modelName, {
     ...providerOptions,
     id: options.id ?? providerOptions.id,
-    env: options.env ?? providerOptions.env,
+    env: providerOptions.env ?? options.env,
   });
 }
