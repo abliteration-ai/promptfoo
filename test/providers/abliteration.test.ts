@@ -66,6 +66,47 @@ describe('AbliterationProvider', () => {
     expect(provider.config.apiBaseUrl).toBe('https://env.example.com/v1');
   });
 
+  it('uses providerOptions.env base URL when config does not override it', () => {
+    const provider = new AbliterationProvider('abliterated-model', {
+      env: {
+        ABLIT_API_BASE_URL: 'https://context.example.com/v1',
+      },
+    });
+
+    expect(provider.config.apiBaseUrl).toBe('https://context.example.com/v1');
+  });
+
+  it('prefers config.apiBaseUrl over providerOptions.env and process.env', () => {
+    mockAbliterationEnv({
+      ABLIT_API_BASE_URL: 'https://process.example.com/v1',
+    });
+
+    const provider = new AbliterationProvider('abliterated-model', {
+      config: {
+        apiBaseUrl: 'https://config.example.com/v1',
+      },
+      env: {
+        ABLIT_API_BASE_URL: 'https://context.example.com/v1',
+      },
+    });
+
+    expect(provider.config.apiBaseUrl).toBe('https://config.example.com/v1');
+  });
+
+  it('prefers providerOptions.env over process.env when config is unset', () => {
+    mockAbliterationEnv({
+      ABLIT_API_BASE_URL: 'https://process.example.com/v1',
+    });
+
+    const provider = new AbliterationProvider('abliterated-model', {
+      env: {
+        ABLIT_API_BASE_URL: 'https://context.example.com/v1',
+      },
+    });
+
+    expect(provider.config.apiBaseUrl).toBe('https://context.example.com/v1');
+  });
+
   it('treats empty API base URLs as unset', () => {
     mockAbliterationEnv({
       ABLIT_API_BASE_URL: '',
@@ -103,6 +144,18 @@ describe('AbliterationProvider', () => {
         apiKeyEnvar: 'ABLIT_KEY',
       },
     });
+  });
+
+  it('redacts apiKey in JSON output when it was provided with a value', () => {
+    const provider = new AbliterationProvider('abliterated-model', {
+      config: {
+        apiKey: 'super-secret',
+      },
+    });
+
+    const serialized = provider.toJSON();
+    expect(serialized.config.apiKey).toBeUndefined();
+    expect(JSON.stringify(serialized)).not.toContain('super-secret');
   });
 
   it('calls the API successfully', async () => {
