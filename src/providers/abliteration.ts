@@ -42,7 +42,7 @@ export class AbliterationProvider extends OpenAiChatCompletionProvider {
       model: this.modelName,
       config: {
         ...this.config,
-        ...('apiKey' in this.config ? { apiKey: undefined } : {}),
+        apiKey: undefined,
       },
     };
   }
