@@ -1,18 +1,43 @@
 ---
 title: Abliteration Provider
 sidebar_label: Abliteration
-description: "Configure Abliteration's OpenAI-compatible chat completions API in Promptfoo for text and multimodal evals, including standard chat and image prompts."
-sidebar_position: 5
+description: "Configure Abliteration's OpenAI-compatible chat completions API in Promptfoo for text and multimodal evals against abliterated (refusal-stripped) open-weight models."
+sidebar_position: 85
 ---
 
 # Abliteration
 
-[Abliteration](https://abliteration.ai/) exposes an OpenAI-compatible chat completions API, so Promptfoo can use it through a dedicated `abliteration:` provider.
+[Abliteration](https://abliteration.ai/) is a third-party service that hosts
+**"abliterated"** models — open-weight LLMs where the refusal direction has
+been removed from the residual stream so the model no longer declines
+requests it would ordinarily refuse. It exposes an OpenAI-compatible chat
+completions API, and Promptfoo ships a thin `abliteration:` wrapper around the
+[OpenAI provider](/docs/providers/openai/) for it.
+
+:::warning Safety
+
+Abliterated models intentionally bypass the safety training of their base
+models. They are primarily useful for red-teaming, jailbreak evaluation, and
+safety research — not for production traffic. You are responsible for how
+outputs are used and for complying with the model licenses and laws that
+apply in your jurisdiction.
+
+:::
 
 ## Setup
 
-1. Get an API key from Abliteration.
-2. Set the `ABLIT_KEY` environment variable or provide `apiKey` in your provider config.
+1. Obtain an API key from Abliteration.
+2. Set the `ABLIT_KEY` environment variable, or pass `apiKey` in your
+   provider config.
+
+## Environment Variables
+
+| Variable             | Description                                                                               |
+| -------------------- | ----------------------------------------------------------------------------------------- |
+| `ABLIT_KEY`          | API key sent as the bearer token. Required unless `apiKey` is set in the provider config. |
+| `ABLIT_API_BASE_URL` | Override for the chat-completions base URL. Defaults to `https://api.abliteration.ai/v1`. |
+
+Provider config values take precedence over environment variables.
 
 ## Basic Configuration
 
@@ -25,11 +50,15 @@ providers:
       max_tokens: 512
 ```
 
-`abliteration:<model>` is the default syntax. `abliteration:chat:<model>` is also supported.
+Replace `abliterated-model` with the ID of a real model available on your
+Abliteration account. `abliteration:<model>` is the default syntax;
+`abliteration:chat:<model>` is also supported.
 
 ## OpenAI Compatibility
 
-Abliteration uses the same request shape as OpenAI chat completions. Most options from the [OpenAI provider](/docs/providers/openai/) work here too, including tools, structured output, and multimodal messages.
+Abliteration speaks the OpenAI chat-completions protocol, so most options
+from the [OpenAI provider](/docs/providers/openai/) work here too —
+including tools, structured output, and multimodal messages.
 
 ## Multimodal Example
 
