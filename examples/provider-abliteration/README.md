@@ -10,7 +10,8 @@ cd provider-abliteration
 ## Prerequisites
 
 - An [Abliteration](https://abliteration.ai/) account and API key.
-- At least one model ID available on that account.
+- Access to the `abliterated-model` model, or another model ID available on
+  your account.
 
 ## Setup
 
@@ -20,10 +21,8 @@ cd provider-abliteration
    export ABLIT_KEY=your-key-here
    ```
 
-2. Open `promptfooconfig.yaml` and replace the placeholder
-   `abliterated-model` with a real model ID from your Abliteration
-   dashboard. Running the example without this step will fail with a
-   provider error.
+2. The example uses Abliteration's default `abliterated-model`. Replace it in
+   `promptfooconfig.yaml` only if your account should target a different model.
 
 ## Run
 

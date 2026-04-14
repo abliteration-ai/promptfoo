@@ -1,6 +1,7 @@
 import { getEnvString } from '../envars';
 import { OpenAiChatCompletionProvider } from './openai/chat';
 
+import type { EnvVarKey } from '../envars';
 import type { EnvOverrides } from '../types/env';
 import type { ApiProvider, ProviderOptions } from '../types/index';
 
@@ -24,8 +25,23 @@ export class AbliterationProvider extends OpenAiChatCompletionProvider {
           normalizeApiBaseUrl(getEnvString(ABLITERATION_API_BASE_URL_ENV_VAR)) ??
           ABLITERATION_API_BASE_URL,
         apiKeyEnvar: providerOptions.config?.apiKeyEnvar ?? 'ABLIT_KEY',
+        showThinking: providerOptions.config?.showThinking ?? false,
       },
     });
+  }
+
+  override getApiKey(): string | undefined {
+    const apiKeyEnvar = this.config.apiKeyEnvar as EnvVarKey | undefined;
+    return (
+      this.config.apiKey ||
+      (apiKeyEnvar
+        ? this.env?.[apiKeyEnvar as keyof EnvOverrides] || getEnvString(apiKeyEnvar)
+        : undefined)
+    );
+  }
+
+  override getOrganization(): undefined {
+    return undefined;
   }
 
   id(): string {

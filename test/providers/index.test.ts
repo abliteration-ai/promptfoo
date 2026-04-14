@@ -709,6 +709,7 @@ describe('loadApiProvider', () => {
     expect(provider.id()).toBe('abliteration:abliterated-model');
     expect(provider.config.apiBaseUrl).toBe('https://api.abliteration.ai/v1');
     expect(provider.config.apiKeyEnvar).toBe('ABLIT_KEY');
+    expect(provider.config.showThinking).toBe(false);
   });
 
   it('loadApiProvider with abliteration chat format', async () => {
@@ -717,6 +718,7 @@ describe('loadApiProvider', () => {
     expect(provider.id()).toBe('abliteration:abliterated-model');
     expect(provider.config.apiBaseUrl).toBe('https://api.abliteration.ai/v1');
     expect(provider.config.apiKeyEnvar).toBe('ABLIT_KEY');
+    expect(provider.config.showThinking).toBe(false);
   });
 
   it('loadApiProvider rejects malformed abliteration routes', async () => {

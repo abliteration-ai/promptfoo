@@ -1,14 +1,14 @@
 ---
 title: Abliteration Provider
 sidebar_label: Abliteration
-description: "Configure Abliteration's OpenAI-compatible chat completions API in Promptfoo for text and multimodal evals against abliterated (refusal-stripped) open-weight models."
+description: "Configure Abliteration's OpenAI-compatible chat completions API in Promptfoo for text and multimodal evals."
 sidebar_position: 85
 ---
 
 # Abliteration
 
 [Abliteration](https://abliteration.ai/) is a third-party service that hosts
-**"abliterated"** models — open-weight LLMs where the refusal direction has
+**"abliterated"** models - open-weight LLMs where the refusal direction has
 been removed from the residual stream so the model no longer declines
 requests it would ordinarily refuse. It exposes an OpenAI-compatible chat
 completions API, and Promptfoo ships a thin `abliteration:` wrapper around the
@@ -18,7 +18,7 @@ completions API, and Promptfoo ships a thin `abliteration:` wrapper around the
 
 Abliterated models intentionally bypass the safety training of their base
 models. They are primarily useful for red-teaming, jailbreak evaluation, and
-safety research — not for production traffic. You are responsible for how
+safety research - not for production traffic. You are responsible for how
 outputs are used and for complying with the model licenses and laws that
 apply in your jurisdiction.
 
@@ -50,15 +50,19 @@ providers:
       max_tokens: 512
 ```
 
-Replace `abliterated-model` with the ID of a real model available on your
-Abliteration account. `abliteration:<model>` is the default syntax;
-`abliteration:chat:<model>` is also supported.
+The examples use Abliteration's `abliterated-model`. Replace it if your
+account should target a different model. `abliteration:<model>` is the default
+syntax; `abliteration:chat:<model>` is also supported.
 
 ## OpenAI Compatibility
 
 Abliteration speaks the OpenAI chat-completions protocol, so most options
-from the [OpenAI provider](/docs/providers/openai/) work here too —
-including tools, structured output, and multimodal messages.
+from the [OpenAI provider](/docs/providers/openai/) work here too, including
+sampling options, structured output, and multimodal messages.
+
+Abliteration responses can include `reasoning_content`. Promptfoo hides this
+thinking output by default for this provider. Set `showThinking: true` in the
+provider config if you want it included in eval outputs.
 
 ## Multimodal Example
 
@@ -88,4 +92,7 @@ providers:
 tests:
   - vars:
       question: "What's in this image?"
+    assert:
+      - type: icontains
+        value: stonehenge
 ```
